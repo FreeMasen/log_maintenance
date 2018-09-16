@@ -1,0 +1,9 @@
+[package]
+name = "log_maintenance"
+version = "0.1.0"
+authors = ["Robert Masen <r@robertmasen.pizza>"]
+
+[dependencies]
+walkdir = "2.2.5"
+dirs = "1.0.3"
+regex = "1.0.5"
