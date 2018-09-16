@@ -137,9 +137,3 @@ impl From<::std::num::ParseIntError> for Error {
         Error::ParseInt(other)
     }
 }
-
-impl From<regex::Error> for Error {
-    fn from(other: regex::Error) -> Self {
-        Error::Regex(other)
-    }
-}
