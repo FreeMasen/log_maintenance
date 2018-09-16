@@ -1,6 +1,5 @@
 extern crate dirs;
 extern crate walkdir;
-extern crate regex;
 
 use std::{
     collections::HashMap,
