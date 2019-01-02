@@ -61,7 +61,7 @@ fn do_work(log_dir: &PathBuf, max_size: u64) -> Result<(), Error> {
 
 fn parse_file_name(entry: &walkdir::DirEntry) -> Result<Option<(String, u8)>, Error> {
     let full_name = entry.file_name().to_string_lossy();
-    if full_name.starts_with(".") {
+    if full_name.starts_with(".") || !full_name.ends_with(".log") {
         return Ok(None)
     }
     let mut parts = full_name.split('.');
