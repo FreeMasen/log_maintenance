@@ -2,11 +2,11 @@
 name = "log_maintenance"
 version = "0.1.0"
 authors = ["Robert Masen <r@robertmasen.pizza>"]
-repo = "https://github.com/FreeMasen/log_maintenance"
+repository = "https://github.com/FreeMasen/log_maintenance"
 
 [dependencies]
-walkdir = "2.2.5"
-dirs = "1.0.3"
+walkdir = "2.2.7"
+dirs = "1.0.4"
 serde = "1"
 serde_derive = "1"
 toml = "0.4"

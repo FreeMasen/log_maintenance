@@ -65,8 +65,8 @@ fn parse_file_name(entry: &walkdir::DirEntry) -> Result<Option<(String, u8)>, Er
         return Ok(None)
     }
     let mut parts = full_name.split('.');
-    let name = parts.next().ok_or(Error::Other(format!("unable to get file name {}", file_name)))?;
-    let next = parts.next().ok_or(Error::Other(format!("{} is an invalid filename", file_name)))?;
+    let name = parts.next().ok_or(Error::Other(format!("unable to get file name {}", full_name)))?;
+    let next = parts.next().ok_or(Error::Other(format!("{} is an invalid filename", full_name)))?;
     Ok(
         Some(
             if next == "log" {
