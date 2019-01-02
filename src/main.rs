@@ -1,4 +1,8 @@
 extern crate dirs;
+extern crate serde;
+#[macro_use]
+extern crate serde_derive;
+extern crate toml;
 extern crate walkdir;
 
 use std::{
@@ -13,15 +17,14 @@ use walkdir::{WalkDir};
 use dirs::home_dir;
 
 fn main() -> Result<(), Error> {
-    let mut log_dir = home_dir().ok_or(Error::other("Unable to find home dir"))?;
-    log_dir.push("logs");
-    do_work(&log_dir)?;
+    let config = get_config()?;
+    do_work(&config.log_dir, config.max_size)?;
     Ok(())
 }
 
-fn do_work(p: &PathBuf) -> Result<(), Error> {
+fn do_work(log_dir: &PathBuf, max_size: u64) -> Result<(), Error> {
     let mut files = HashMap::new();
-    let wd = WalkDir::new(p).min_depth(1);
+    let wd = WalkDir::new(log_dir).min_depth(1);
     for entry in wd {
         let entry = entry?;
         if let Some((name, number)) = parse_file_name(&entry)? {
@@ -35,18 +38,18 @@ fn do_work(p: &PathBuf) -> Result<(), Error> {
     }
     for (name, mut log) in files.iter_mut() {
         log.numbers.sort();
-        if log.main_size > 1024 * 1024 * 5 {
+        if log.main_size > max_size {
             for num in log.numbers.iter().rev() {
                 if num == &10 {
-                    ::std::fs::remove_file(p.join(&format!("{}.10.log", name)))?;
+                    ::std::fs::remove_file(log_dir.join(&format!("{}.10.log", name)))?;
                 } else if num == &0 {
-                    let from = p.join(&format!("{}.log", name));
-                    let to = p.join(&format!("{}.1.log", name));
+                    let from = log_dir.join(&format!("{}.log", name));
+                    let to = log_dir.join(&format!("{}.1.log", name));
                     ::std::fs::copy(from.clone(), to)?;
                     ::std::fs::write(from, &[])?;
                 } else {
-                    let from = p.join(&format!("{}.{}.log", name, num));
-                    let to = p.join(&format!("{}.{}.log", name, num + 1));
+                    let from = log_dir.join(&format!("{}.{}.log", name, num));
+                    let to = log_dir.join(&format!("{}.{}.log", name, num + 1));
                     ::std::fs::copy(from.clone(), to)?;
                     ::std::fs::write(from, &[])?;
                 }
@@ -62,20 +65,22 @@ fn parse_file_name(entry: &walkdir::DirEntry) -> Result<Option<(String, u8)>, Er
         return Ok(None)
     }
     let mut parts = full_name.split('.');
-    let name = parts.next().ok_or(Error::other("unable to get file name"))?;
-    let next = parts.next().ok_or(Error::other("filename is invalid"))?;
+    let name = parts.next().ok_or(Error::Other(format!("unable to get file name {}", file_name)))?;
+    let next = parts.next().ok_or(Error::Other(format!("{} is an invalid filename", file_name)))?;
     Ok(
         Some(
             if next == "log" {
                 (name.to_string(), 0)
             } else {
-                let n: u8 = next.parse()?;
+                let n: u8 = next.parse().map_err(|e| {
+                    eprintln!("Error parsing {}", full_name);
+                    e
+                })?;
                 (name.to_string(), n)
             }
         )
     )
 }
-
 
 struct Log {
     numbers: Vec<u8>,
@@ -91,13 +96,34 @@ impl ::std::default::Default for Log {
     }
 }
 
+#[derive(Deserialize)]
+struct Config {
+    pub log_dir: PathBuf,
+    pub max_size: u64,
+}
+
+fn get_config() -> Result<Config, Error> {
+    let home = home_dir().ok_or(Error::other("Unable to find home dir"))?;
+    if let Ok(config_text) = ::std::fs::read_to_string(home.join(".log_maintenance")) {
+        let ret = toml::from_str(&config_text)?;
+        Ok(ret)
+    } else {
+        Ok(
+            Config {
+                log_dir: home.join("logs"),
+                max_size: 1024,
+            }
+        )
+    }
+}
+
 #[derive(Debug)]
 enum Error {
     Other(String),
     WalkDir(walkdir::Error),
     Io(::std::io::Error),
     ParseInt(::std::num::ParseIntError),
-    Regex(regex::Error),
+    Toml(toml::de::Error),
 }
 
 impl ::std::error::Error  for Error {}
@@ -109,7 +135,7 @@ impl ::std::fmt::Display  for Error {
             Error::WalkDir(ref e) => e.fmt(f),
             Error::Io(ref e) => e.fmt(f),
             Error::ParseInt(ref e) => e.fmt(f),
-            Error::Regex(ref e) => e.fmt(f),
+            Error::Toml(ref e) => e.fmt(f),
         }
     }
 }
@@ -135,5 +161,11 @@ impl From<::std::io::Error> for Error {
 impl From<::std::num::ParseIntError> for Error {
     fn from(other: ::std::num::ParseIntError) -> Self {
         Error::ParseInt(other)
+    }
+}
+
+impl From<toml::de::Error> for Error {
+    fn from(other: toml::de::Error) -> Self {
+        Error::Toml(other)
     }
 }

@@ -7,3 +7,6 @@ repo = "https://github.com/FreeMasen/log_maintenance"
 [dependencies]
 walkdir = "2.2.5"
 dirs = "1.0.3"
+serde = "1"
+serde_derive = "1"
+toml = "0.4"
